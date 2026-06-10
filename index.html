@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- API Config -->
+    <script src="config.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scam Website Scanner | Premium Security Suite</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            base: '#000000',        // Pure Black
+                            panel: 'rgba(20, 15, 10, 0.7)',
+                            primary: '#E50914',     // Premium Red
+                            secondary: '#D4AF37',   // Metallic Gold
+                            accent: '#F5A623',      // Bright Gold
+                            text: '#F3F4F6',
+                            muted: '#9CA3AF'
+                        }
+                    },
+                    animation: {
+                        'glow-pulse': 'glow-pulse 3s ease-in-out infinite',
+                        'slide-up': 'slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                    },
+                    keyframes: {
+                        'glow-pulse': {
+                            '0%, 100%': { opacity: 0.8, filter: 'brightness(1)' },
+                            '50%': { opacity: 1, filter: 'brightness(1.3)' }
+                        },
+                        'slide-up': {
+                            '0%': { opacity: 0, transform: 'translateY(20px)' },
+                            '100%': { opacity: 1, transform: 'translateY(0)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Chart.js & Three.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        body {
+            background-color: #000000;
+            color: #e5e7eb;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            overflow: hidden;
+        }
+
+        /* Premium Gold Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.4); }
+        ::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.4); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(212, 175, 55, 0.8); }
+
+        .glass-panel {
+            background: linear-gradient(135deg, rgba(20, 15, 10, 0.8) 0%, rgba(5, 0, 0, 0.9) 100%);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.8);
+        }
+
+        .cyber-border-primary { border: 1px solid rgba(229, 9, 20, 0.5); box-shadow: 0 0 20px rgba(229, 9, 20, 0.15); }
+        .cyber-border-secondary { border: 1px solid rgba(212, 175, 55, 0.5); box-shadow: 0 0 20px rgba(212, 175, 55, 0.15); }
+
+        .scan-button {
+            background: linear-gradient(45deg, #E50914, #990000);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            border: 1px solid #FF3333;
+        }
+        .scan-button::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.5), transparent);
+            transition: all 0.5s ease;
+            z-index: -1;
+        }
+        .scan-button:hover::before { left: 100%; }
+
+        .terminal-text {
+            font-family: 'Fira Code', 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- Icons ---
+    const Shield = ({ className = "w-6 h-6" }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
+    const AlertTriangle = ({ className = "w-6 h-6" }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>;
+    const TerminalIcon = ({ className = "w-6 h-6" }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
+    const ActivityIcon = ({ className = "w-6 h-6" }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
+    const CheckCircle = ({ className = "w-6 h-6" }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+    const Database = ({ className = "w-6 h-6" }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>;
+    const CopyIcon = ({ className = "w-4 h-4" }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>;
+
+    // --- 3D Background Component (Gold/Red Particles) ---
+    const ThreeBackground = () => {
+        const mountRef = useRef(null);
+
+        useEffect(() => {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            mountRef.current.appendChild(renderer.domElement);
+
+            const geometry = new THREE.BufferGeometry();
+            const particlesCount = 2000;
+            const posArray = new Float32Array(particlesCount * 3);
+            const colorsArray = new Float32Array(particlesCount * 3);
+
+            const colorGold = new THREE.Color('#D4AF37');
+            const colorRed = new THREE.Color('#E50914');
+
+            for(let i = 0; i < particlesCount; i++) {
+                posArray[i*3] = (Math.random() - 0.5) * 15;
+                posArray[i*3+1] = (Math.random() - 0.5) * 15;
+                posArray[i*3+2] = (Math.random() - 0.5) * 15;
+
+                // 80% Gold, 20% Red
+                const mixedColor = Math.random() > 0.8 ? colorRed : colorGold;
+                colorsArray[i*3] = mixedColor.r;
+                colorsArray[i*3+1] = mixedColor.g;
+                colorsArray[i*3+2] = mixedColor.b;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colorsArray, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.02,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.5,
+                blending: THREE.AdditiveBlending
+            });
+
+            const particlesMesh = new THREE.Points(geometry, material);
+            scene.add(particlesMesh);
+
+            camera.position.z = 5;
+
+            let mouseX = 0;
+            let mouseY = 0;
+            const windowHalfX = window.innerWidth / 2;
+            const windowHalfY = window.innerHeight / 2;
+
+            const onDocumentMouseMove = (event) => {
+                mouseX = (event.clientX - windowHalfX);
+                mouseY = (event.clientY - windowHalfY);
+            }
+            document.addEventListener('mousemove', onDocumentMouseMove);
+
+            const animate = () => {
+                requestAnimationFrame(animate);
+
+                // Slow ambient rotation
+                particlesMesh.rotation.y += 0.0005;
+                particlesMesh.rotation.x += 0.0002;
+
+                // Mouse parallax effect
+                camera.position.x += (mouseX * 0.001 - camera.position.x) * 0.05;
+                camera.position.y += (-mouseY * 0.001 - camera.position.y) * 0.05;
+                camera.lookAt(scene.position);
+
+                renderer.render(scene, camera);
+            };
+            animate();
+
+            const handleResize = () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+            window.addEventListener('resize', handleResize);
+
+            return () => {
+                window.removeEventListener('resize', handleResize);
+                document.removeEventListener('mousemove', onDocumentMouseMove);
+                if(mountRef.current) mountRef.current.removeChild(renderer.domElement);
+                geometry.dispose();
+                material.dispose();
+                renderer.dispose();
+            }
+        }, []);
+
+        return <div ref={mountRef} className="fixed inset-0 z-0 pointer-events-none mix-blend-screen" />;
+    };
+
+    // --- API Config ---
+    const apiKey = typeof CONFIG !== 'undefined' ? CONFIG.GEMINI_API_KEY : '';
+
+    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Standard Fetch with Retry
+    const fetchWithRetry = async (url, options, retries = 5) => {
+        const delays = [1000, 2000, 4000, 8000, 16000];
+        for (let i = 0; i < retries; i++) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errText}`);
+                }
+                return await response.json();
+            } catch (error) {
+                if (i === retries - 1) throw error;
+                await delay(delays[i]);
+            }
+        }
+    };
+
+    // Dynamic Model Selection
+    const getDynamicBestModel = async (logger) => {
+        try {
+            logger('SYSTEM', 'Querying API for available models...');
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch models: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // Find all models that actually support generating text content
+            const validModels = data.models
+                .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
+                .map(m => m.name.replace('models/', ''));
+
+            logger('SYSTEM', `Successfully fetched model list.`, `Found ${validModels.length} compatible models:\n- ${validModels.join('\n- ')}`);
+
+            // Hierarchy of preferred models (fastest/newest first)
+            const preferences = [
+                'gemini-2.5-flash-preview-09-2025',
+                'gemini-2.5-flash',
+                'gemini-2.0-flash',
+                'gemini-1.5-flash',
+                'gemini-pro'
+            ];
+
+            for (const pref of preferences) {
+                if (validModels.includes(pref)) {
+                    logger('SYSTEM', `Selected optimal supported model: ${pref}`);
+                    return pref;
+                }
+            }
+
+            // If preferences aren't found, pick the first valid one we retrieved
+            if (validModels.length > 0) {
+                logger('SYSTEM', `Preferences not found. Falling back to available model: ${validModels[0]}`);
+                return validModels[0];
+            }
+
+            throw new Error("No models supporting 'generateContent' were found in the API response.");
+        } catch (err) {
+            logger('ERROR', 'Failed to dynamically list models.', err.message);
+            throw err;
+        }
+    };
+
+    const analyzeUrlWithGemini = async (targetUrl, logger) => {
+        const systemPrompt = `You are a world-class Cybersecurity AI specialized in detecting phishing, scams, and malicious websites.
+            Analyze the provided URL string. Identify common phishing indicators (typosquatting, strange TLDs, suspicious paths, known brand impersonation).
+            You must return a strict JSON object simulating a complete security report.
+            Even if you cannot perform a live WHOIS or SSL check, infer likely risks based on the URL structure and common knowledge, and provide plausible 'simulated' values for IP, Server details, and 'phishingHistory' for demonstration purposes.
+            If a URL is a well-known safe domain (e.g., google.com, github.com), score it as 0 risk and indicate no phishing history.`;
+
+        const payload = {
+            contents: [{ parts: [{ text: `Analyze this URL for security risks and check phishing database history: ${targetUrl}` }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                        isScam: { type: "BOOLEAN" },
+                        riskScore: { type: "INTEGER" },
+                        securityProtocol: { type: "STRING" },
+                        sslCertificate: { type: "STRING" },
+                        domainAge: { type: "STRING" },
+                        ipAddress: { type: "STRING" },
+                        serverLocation: { type: "STRING" },
+                        phishingHistory: { type: "STRING", description: "History of the domain in phishing reports or databases (e.g. 'Reported 3 times in 2023', 'No known reports')" },
+                        analysisSummary: { type: "STRING" },
+                        keyFindings: { type: "ARRAY", items: { type: "STRING" } }
+                    },
+                    required: ["isScam", "riskScore", "securityProtocol", "sslCertificate", "domainAge", "ipAddress", "serverLocation", "phishingHistory", "analysisSummary", "keyFindings"]
+                }
+            }
+        };
+
+        // 1. First dynamically fetch and determine the best available model
+        const bestModel = await getDynamicBestModel(logger);
+
+        // 2. Formulate the URL with the confirmed accessible model
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${bestModel}:generateContent?key=${apiKey}`;
+
+        logger('SYSTEM', `Initiating analysis POST request to ${bestModel}...`);
+
+        // 3. Make the API call
+        const result = await fetchWithRetry(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!textResponse) throw new Error(`Invalid AI response format from ${bestModel}.`);
+
+        return JSON.parse(textResponse);
+    };
+
+    // --- Sub-components ---
+    const RiskChart = ({ score }) => {
+        const chartRef = useRef(null);
+        const chartInstance = useRef(null);
+
+        useEffect(() => {
+            if (chartInstance.current) chartInstance.current.destroy();
+            const ctx = chartRef.current.getContext('2d');
+
+            // Black, Gold, Red theme
+            let color = '#D4AF37'; // Gold (Safe / Warning)
+            if (score > 70) color = '#E50914'; // Red (Danger)
+
+            chartInstance.current = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Risk', 'Safety'],
+                    datasets: [{
+                        data: [score, 100 - score],
+                        backgroundColor: [color, 'rgba(212, 175, 55, 0.05)'],
+                        borderColor: [color, 'transparent'],
+                        borderWidth: 1,
+                        cutout: '80%'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    animation: { animateScale: true, animateRotate: true }
+                }
+            });
+            return () => chartInstance.current?.destroy();
+        }, [score]);
+
+        return (
+            <div className="relative w-28 h-28 flex items-center justify-center">
+                <canvas ref={chartRef}></canvas>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-3xl font-black tracking-tighter text-white" style={{ textShadow: `0 0 15px ${score > 70 ? '#E50914' : '#D4AF37'}` }}>
+                            {score}
+                        </span>
+                    <span className="text-[9px] text-cyber-secondary uppercase tracking-widest mt-0.5">Risk</span>
+                </div>
+            </div>
+        );
+    };
+
+    // --- Main App ---
+    const App = () => {
+        const [urlInput, setUrlInput] = useState("");
+        const [isScanning, setIsScanning] = useState(false);
+        const [currentReport, setCurrentReport] = useState(null);
+        const [activeTab, setActiveTab] = useState("dashboard");
+        const logsEndRef = useRef(null);
+
+        const [systemLogs, setSystemLogs] = useState([
+            { id: 0, time: new Date().toLocaleTimeString([], {hour12:false}), type: 'SYSTEM', msg: 'Security Engine initialized. Awaiting target parameters.', details: null }
+        ]);
+        const [expandedLogs, setExpandedLogs] = useState(new Set());
+
+        const [localDatabase, setLocalDatabase] = useState([
+            { id: 1, url: "https://secure-bank.example.com", timestamp: new Date(Date.now() - 86400).toLocaleString(), isScam: false, riskScore: 5 },
+            { id: 2, url: "http://update-wallet-auth.xyz", timestamp: new Date(Date.now() - 3600).toLocaleString(), isScam: true, riskScore: 94 }
+        ]);
+
+        const addLog = (type, msg, details = null) => {
+            setSystemLogs(prev => [...prev, {
+                id: Date.now() + Math.random(),
+                time: new Date().toLocaleTimeString([], {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'}),
+                type, msg, details
+            }]);
+        };
+
+        const toggleLogExpand = (id) => {
+            setExpandedLogs(prev => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+            });
+        };
+
+        const handleCopyLog = (text) => {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+            } catch (err) {
+                console.error('Copy failed', err);
+            }
+            document.body.removeChild(textArea);
+        };
+
+        // Auto-scroll logs
+        useEffect(() => {
+            if (activeTab === 'logs') {
+                logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }
+        }, [systemLogs, activeTab, expandedLogs]);
+
+        const handleScan = async (e) => {
+            e.preventDefault();
+            if (!urlInput.trim()) return;
+
+            let targetUrl = urlInput.trim();
+            if (!/^https?:\/\//i.test(targetUrl)) targetUrl = 'http://' + targetUrl;
+
+            setIsScanning(true);
+            setCurrentReport(null);
+            setActiveTab("dashboard");
+            addLog('INFO', `Initiating deep scan vector for: ${targetUrl}`);
+
+            try {
+                const reportData = await analyzeUrlWithGemini(targetUrl, (type, msg, details) => {
+                    // Forward logs appropriately
+                    if (type === 'SYSTEM' || type === 'ERROR') {
+                        addLog(type, msg, details);
+                    } else {
+                        addLog('SYSTEM', type, msg); // Handle old signature just in case
+                    }
+                });
+
+                const newEntry = {
+                    id: Date.now(),
+                    url: targetUrl,
+                    timestamp: new Date().toLocaleString(),
+                    isScam: reportData.isScam,
+                    riskScore: reportData.riskScore,
+                    details: reportData
+                };
+                setLocalDatabase([newEntry, ...localDatabase]);
+                setCurrentReport(newEntry);
+                addLog('SUCCESS', `Analysis complete. Threat Score: ${reportData.riskScore}`, JSON.stringify(reportData, null, 2));
+
+            } catch (error) {
+                addLog('ERROR', "Analysis failed. System encountered critical exception.", error.message || error.toString());
+            } finally {
+                setIsScanning(false);
+            }
+        };
+
+        return (
+            <div className="h-screen w-screen flex flex-col overflow-hidden relative selection:bg-cyber-secondary selection:text-black">
+                <ThreeBackground />
+
+                {/* Top Navigation / Header */}
+                <header className="glass-panel border-b border-cyber-secondary/30 z-20 flex items-center justify-between px-6 py-4">
+                    <div className="flex items-center space-x-4">
+                        <div className="w-10 h-10 rounded bg-cyber-secondary/10 border border-cyber-secondary flex items-center justify-center text-cyber-secondary shadow-[0_0_15px_rgba(212,175,55,0.4)]">
+                            <Shield className="w-6 h-6" />
+                        </div>
+                        <h1 className="text-2xl font-black tracking-widest text-white uppercase italic">
+                            Scam<span className="text-cyber-secondary">Scanner</span> <span className="text-xs text-cyber-primary ml-2 font-mono not-italic font-normal border border-cyber-primary/40 px-2 py-0.5 rounded-full bg-cyber-primary/10">Premium</span>
+                        </h1>
+                    </div>
+                    <div className="flex space-x-4">
+                        <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2 font-mono text-sm uppercase tracking-wider transition-all border-b-2 ${activeTab === 'dashboard' ? 'border-cyber-secondary text-cyber-secondary' : 'border-transparent text-gray-500 hover:text-white'}`}>Scanner</button>
+                        <button onClick={() => setActiveTab('history')} className={`px-4 py-2 font-mono text-sm uppercase tracking-wider transition-all border-b-2 ${activeTab === 'history' ? 'border-cyber-secondary text-cyber-secondary' : 'border-transparent text-gray-500 hover:text-white'}`}>Database</button>
+                        <button onClick={() => setActiveTab('logs')} className={`px-4 py-2 font-mono text-sm uppercase tracking-wider transition-all border-b-2 ${activeTab === 'logs' ? 'border-cyber-secondary text-cyber-secondary' : 'border-transparent text-gray-500 hover:text-white'}`}>Logs</button>
+                    </div>
+                </header>
+
+                {/* Main Workspace */}
+                <main className="flex-1 flex flex-col z-10 overflow-hidden p-4 lg:p-6 max-w-[1000px] mx-auto w-full">
+
+                    {/* Interactive Area */}
+                    <div className="flex-1 flex flex-col h-full overflow-y-auto pr-2 custom-scrollbar">
+
+                        {activeTab === 'dashboard' && (
+                            <div className="space-y-4 animate-slide-up flex flex-col">
+
+                                {/* Scan Input Area - ALWAYS TOP */}
+                                <div className={`glass-panel rounded-xl cyber-border-secondary relative overflow-hidden transition-all duration-300 ${currentReport ? 'p-4 md:p-5' : 'p-6 md:p-8'}`}>
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                                        <div>
+                                            <h2 className="text-lg font-bold text-white uppercase tracking-wider">Target Acquisition</h2>
+                                            {!currentReport && <p className="text-xs text-gray-400 font-mono mt-1">Deploy AI neural analysis to detect phishing signatures, typosquatting, and structural anomalies.</p>}
+                                        </div>
+                                    </div>
+
+                                    <form onSubmit={handleScan} className="flex flex-col sm:flex-row gap-3">
+                                        <input
+                                            type="text"
+                                            value={urlInput}
+                                            onChange={(e) => setUrlInput(e.target.value)}
+                                            placeholder="[Enter Target URL] > https://..."
+                                            className="flex-1 bg-black border border-cyber-secondary/40 rounded-lg px-4 py-3 focus:outline-none focus:border-cyber-secondary focus:ring-1 focus:ring-cyber-secondary transition-all text-white font-mono shadow-inner text-sm placeholder-gray-600"
+                                            disabled={isScanning}
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={isScanning}
+                                            className={`scan-button px-6 py-3 rounded-lg font-bold uppercase tracking-widest text-white transition-all min-w-[160px] flex items-center justify-center text-sm
+                                                    ${isScanning ? 'opacity-50 cursor-not-allowed border-gray-600' : 'hover:shadow-[0_0_20px_rgba(229,9,20,0.6)] hover:-translate-y-0.5 border-cyber-primary'}`}
+                                        >
+                                            {isScanning ? (
+                                                <span className="flex items-center">
+                                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                                        Scanning...
+                                                    </span>
+                                            ) : 'Execute Scan'}
+                                        </button>
+                                    </form>
+                                </div>
+
+                                {/* Scan Results */}
+                                {currentReport?.details && (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-slide-up" style={{animationDelay: '0.1s'}}>
+
+                                        {/* Compact Score Card */}
+                                        <div className={`glass-panel p-5 rounded-xl flex flex-col items-center justify-center relative overflow-hidden h-auto
+                                                ${currentReport.details.isScam ? 'cyber-border-primary bg-cyber-primary/5' : 'cyber-border-secondary bg-cyber-secondary/5'}`}>
+
+                                            <h3 className="text-xs font-mono uppercase text-gray-400 mb-3 z-10">Threat Assessment</h3>
+                                            <RiskChart score={currentReport.details.riskScore} />
+
+                                            <div className={`mt-4 px-5 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase border z-10
+                                                    ${currentReport.details.isScam ? 'bg-cyber-primary/20 text-cyber-primary border-cyber-primary shadow-[0_0_15px_rgba(229,9,20,0.4)]' : 'bg-cyber-secondary/20 text-cyber-secondary border-cyber-secondary shadow-[0_0_15px_rgba(212,175,55,0.4)]'}`}>
+                                                {currentReport.details.isScam ? 'Critical Threat' : 'Clear / Safe'}
+                                            </div>
+                                        </div>
+
+                                        {/* Info Cards */}
+                                        <div className="md:col-span-2 space-y-4">
+                                            <div className="glass-panel p-5 rounded-xl border border-cyber-secondary/20 bg-black/60">
+                                                <h3 className="font-mono text-cyber-secondary border-b border-cyber-secondary/30 pb-2 mb-3 uppercase text-sm font-bold flex items-center">
+                                                    <ActivityIcon className="w-4 h-4 mr-2" /> Diagnostic Summary
+                                                </h3>
+                                                <p className="text-gray-300 text-sm leading-relaxed mb-4 font-mono">
+                                                    {currentReport.details.analysisSummary}
+                                                </p>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    <div className="bg-black p-3 rounded border border-cyber-secondary/20">
+                                                        <div className="text-[10px] text-cyber-secondary uppercase tracking-wider mb-1">Protocol / SSL</div>
+                                                        <div className="font-mono text-sm text-white">{currentReport.details.securityProtocol}</div>
+                                                        <div className="font-mono text-xs text-gray-400 mt-1">{currentReport.details.sslCertificate}</div>
+                                                    </div>
+                                                    <div className="bg-black p-3 rounded border border-cyber-secondary/20">
+                                                        <div className="text-[10px] text-cyber-secondary uppercase tracking-wider mb-1">Server Vector</div>
+                                                        <div className="font-mono text-sm text-white">{currentReport.details.ipAddress}</div>
+                                                        <div className="font-mono text-xs text-gray-400 mt-1">Age: {currentReport.details.domainAge}</div>
+                                                    </div>
+                                                    <div className="bg-black p-3 rounded border border-cyber-secondary/20 sm:col-span-2">
+                                                        <div className="text-[10px] text-cyber-secondary uppercase tracking-wider mb-1 flex items-center">
+                                                            <Database className="w-3 h-3 mr-1" /> Phishing Database History
+                                                        </div>
+                                                        <div className="font-mono text-sm text-white">
+                                                            {currentReport.details.phishingHistory || "No known reports."}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="glass-panel p-5 rounded-xl border border-cyber-secondary/20 bg-black/60">
+                                                <h3 className="font-mono text-cyber-secondary border-b border-cyber-secondary/30 pb-2 mb-3 uppercase text-sm font-bold flex items-center">
+                                                    <AlertTriangle className="w-4 h-4 mr-2" /> Telemetry Findings
+                                                </h3>
+                                                <ul className="space-y-2">
+                                                    {currentReport.details.keyFindings.map((finding, idx) => (
+                                                        <li key={idx} className="flex items-start text-sm font-mono bg-black p-2 rounded border border-white/5">
+                                                                <span className="mr-3 mt-0.5">
+                                                                    {currentReport.details.isScam ? <AlertTriangle className="w-4 h-4 text-cyber-primary" /> : <CheckCircle className="w-4 h-4 text-cyber-secondary" />}
+                                                                </span>
+                                                            <span className="text-gray-300 leading-relaxed">{finding}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                )}
+
+                            </div>
+                        )}
+
+                        {activeTab === 'history' && (
+                            <div className="glass-panel p-6 rounded-xl border border-cyber-secondary/20 animate-slide-up h-full flex flex-col">
+                                <h2 className="text-xl font-bold mb-6 flex items-center text-white border-b border-cyber-secondary/30 pb-4">
+                                    <Database className="w-6 h-6 mr-2 text-cyber-secondary" /> Local Vector Database
+                                </h2>
+                                <div className="overflow-y-auto custom-scrollbar flex-1">
+                                    <table className="w-full text-left font-mono text-sm border-separate border-spacing-y-2">
+                                        <thead>
+                                        <tr className="text-cyber-secondary text-xs uppercase tracking-wider bg-black/50">
+                                            <th className="px-4 py-3 font-normal rounded-l">Time</th>
+                                            <th className="px-4 py-3 font-normal">Target</th>
+                                            <th className="px-4 py-3 font-normal text-center">Score</th>
+                                            <th className="px-4 py-3 font-normal text-center rounded-r">Status</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {localDatabase.map((entry) => (
+                                            <tr key={entry.id} className="bg-black hover:bg-black/60 transition-colors group cursor-pointer border border-white/5" onClick={() => { if(entry.details) { setCurrentReport(entry); setActiveTab('dashboard'); } }}>
+                                                <td className="px-4 py-4 text-gray-400 whitespace-nowrap rounded-l border-y border-l border-white/5 group-hover:border-cyber-secondary/30">{entry.timestamp.split(',')[1]}</td>
+                                                <td className="px-4 py-4 text-white truncate max-w-[150px] border-y border-white/5 group-hover:border-cyber-secondary/30">{entry.url}</td>
+                                                <td className="px-4 py-4 text-center border-y border-white/5 group-hover:border-cyber-secondary/30">
+                                                            <span className={`px-2 py-1 rounded text-xs font-bold ${entry.riskScore > 50 ? 'text-cyber-primary bg-cyber-primary/10' : 'text-cyber-secondary bg-cyber-secondary/10'}`}>
+                                                                {entry.riskScore}
+                                                            </span>
+                                                </td>
+                                                <td className="px-4 py-4 text-center rounded-r border-y border-r border-white/5 group-hover:border-cyber-secondary/30">
+                                                    {entry.isScam ?
+                                                        <span className="text-cyber-primary text-xs uppercase tracking-widest flex justify-center items-center"><AlertTriangle className="w-3 h-3 mr-1"/> Threat</span> :
+                                                        <span className="text-cyber-secondary text-xs uppercase tracking-widest flex justify-center items-center"><CheckCircle className="w-3 h-3 mr-1"/> Safe</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'logs' && (
+                            <div className="w-full h-full flex flex-col glass-panel rounded-xl cyber-border-secondary shadow-2xl relative overflow-hidden animate-slide-up bg-black/80">
+                                {/* Terminal Header */}
+                                <div className="bg-black px-4 py-3 border-b border-cyber-secondary/30 flex justify-between items-center z-10">
+                                    <div className="flex items-center text-cyber-secondary font-mono text-sm font-bold uppercase tracking-widest">
+                                        <TerminalIcon className="w-4 h-4 mr-2" /> System Logs & Diagnostics
+                                    </div>
+                                    <div className="flex space-x-2">
+                                        <div className="w-3 h-3 rounded-full bg-cyber-primary animate-pulse"></div>
+                                        <div className="w-3 h-3 rounded-full bg-cyber-secondary"></div>
+                                        <div className="w-3 h-3 rounded-full bg-gray-600"></div>
+                                    </div>
+                                </div>
+
+                                {/* Terminal Output */}
+                                <div className="flex-1 p-4 font-mono text-sm overflow-y-auto custom-scrollbar flex flex-col z-10 terminal-text">
+                                    {systemLogs.map((log) => (
+                                        <div key={log.id} className="mb-4 animate-slide-up border-b border-white/10 pb-4 last:border-0">
+                                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+
+                                                {/* Log Main Info */}
+                                                <div className="flex items-start flex-1">
+                                                    <span className="text-gray-500 mr-3 shrink-0">[{log.time}]</span>
+                                                    <span className={`mr-3 shrink-0 w-20 font-bold ${
+                                                        log.type === 'ERROR' ? 'text-cyber-primary' :
+                                                            log.type === 'SUCCESS' ? 'text-green-500' :
+                                                                log.type === 'SYSTEM' ? 'text-gray-400' :
+                                                                    'text-cyber-secondary'
+                                                    }`}>
+                                                            {log.type}
+                                                        </span>
+                                                    <span className={log.type === 'ERROR' ? 'text-red-400' : 'text-gray-300'}>
+                                                            {log.msg}
+                                                        </span>
+                                                </div>
+
+                                                {/* Action Buttons */}
+                                                {log.details && (
+                                                    <div className="flex space-x-2 sm:ml-4 shrink-0 mt-2 sm:mt-0">
+                                                        <button
+                                                            onClick={() => toggleLogExpand(log.id)}
+                                                            className="text-[10px] uppercase tracking-wider bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded text-gray-300 transition-colors"
+                                                        >
+                                                            {expandedLogs.has(log.id) ? 'Collapse Details' : 'View Details'}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleCopyLog(log.details)}
+                                                            className="text-[10px] uppercase tracking-wider bg-cyber-secondary/20 hover:bg-cyber-secondary/40 text-cyber-secondary border border-cyber-secondary/30 px-3 py-1.5 rounded flex items-center transition-colors"
+                                                        >
+                                                            <CopyIcon className="w-3 h-3 mr-1" /> Copy
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Expanded Details View */}
+                                            {log.details && expandedLogs.has(log.id) && (
+                                                <div className="mt-3 p-4 bg-[#0a0500] border-l-2 border-cyber-secondary text-cyber-secondary/90 overflow-x-auto whitespace-pre-wrap text-xs rounded shadow-inner">
+                                                    {log.details}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <div ref={logsEndRef} />
+                                </div>
+                            </div>
+                        )}
+
+                    </div>
+                </main>
+            </div>
+        );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
+</body>
+</html>

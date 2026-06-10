@@ -1,0 +1,6 @@
+# API config
+config.js
+
+# OS files
+.DS_Store
+Thumbs.db

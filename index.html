@@ -213,7 +213,9 @@
     };
 
     // --- API Config ---
-    const apiKey = typeof CONFIG !== 'undefined' ? CONFIG.GEMINI_API_KEY : '';
+    const getApiKey = () => {
+        return localStorage.getItem('gemini_api_key') || (typeof CONFIG !== 'undefined' ? CONFIG.GEMINI_API_KEY : '');
+    };
 
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -239,7 +241,7 @@
     const getDynamicBestModel = async (logger) => {
         try {
             logger('SYSTEM', 'Querying API for available models...');
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${getApiKey()}`);
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch models: ${response.status}`);
@@ -318,7 +320,7 @@
         const bestModel = await getDynamicBestModel(logger);
 
         // 2. Formulate the URL with the confirmed accessible model
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${bestModel}:generateContent?key=${apiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${bestModel}:generateContent?key=${getApiKey()}`;
 
         logger('SYSTEM', `Initiating analysis POST request to ${bestModel}...`);
 
@@ -386,6 +388,7 @@
     // --- Main App ---
     const App = () => {
         const [urlInput, setUrlInput] = useState("");
+        const [apiKeyValue, setApiKeyValue] = useState(localStorage.getItem('gemini_api_key') || '');
         const [isScanning, setIsScanning] = useState(false);
         const [currentReport, setCurrentReport] = useState(null);
         const [activeTab, setActiveTab] = useState("dashboard");
@@ -493,7 +496,17 @@
                             Scam<span className="text-cyber-secondary">Scanner</span> <span className="text-xs text-cyber-primary ml-2 font-mono not-italic font-normal border border-cyber-primary/40 px-2 py-0.5 rounded-full bg-cyber-primary/10">Premium</span>
                         </h1>
                     </div>
-                    <div className="flex space-x-4">
+                    <div className="flex items-center space-x-4">
+                        <input
+                            type="password"
+                            value={apiKeyValue}
+                            onChange={(e) => {
+                                setApiKeyValue(e.target.value);
+                                localStorage.setItem('gemini_api_key', e.target.value);
+                            }}
+                            placeholder="Gemini API Key..."
+                            className="bg-black/50 border border-cyber-secondary/35 rounded px-3 py-1.5 focus:outline-none focus:border-cyber-secondary text-white font-mono text-xs w-44 placeholder-gray-600 transition-all focus:ring-1 focus:ring-cyber-secondary"
+                        />
                         <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2 font-mono text-sm uppercase tracking-wider transition-all border-b-2 ${activeTab === 'dashboard' ? 'border-cyber-secondary text-cyber-secondary' : 'border-transparent text-gray-500 hover:text-white'}`}>Scanner</button>
                         <button onClick={() => setActiveTab('history')} className={`px-4 py-2 font-mono text-sm uppercase tracking-wider transition-all border-b-2 ${activeTab === 'history' ? 'border-cyber-secondary text-cyber-secondary' : 'border-transparent text-gray-500 hover:text-white'}`}>Database</button>
                         <button onClick={() => setActiveTab('logs')} className={`px-4 py-2 font-mono text-sm uppercase tracking-wider transition-all border-b-2 ${activeTab === 'logs' ? 'border-cyber-secondary text-cyber-secondary' : 'border-transparent text-gray-500 hover:text-white'}`}>Logs</button>

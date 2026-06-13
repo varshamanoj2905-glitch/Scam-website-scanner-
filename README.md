@@ -46,4 +46,4 @@ Multi-language support
 Cloud-based threat database
 
 Author
-Varsha S B.Tech Computer Science and Engineering :::
+Varsha S B.Tech Computer Science and Engineering
